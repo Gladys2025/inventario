@@ -1,0 +1,13 @@
+CREATE DATABASE IF NOT EXISTS inventario_db;
+USE inventario_db;
+
+-- Creación de la tabla de inventario
+CREATE TABLE IF NOT EXISTS inventario (
+    id_inventario INT AUTO_INCREMENT PRIMARY KEY,
+    nombre_producto VARCHAR(255) NOT NULL,
+    descripcion TEXT,
+    cantidad INT NOT NULL,
+    precio DECIMAL(10,2) NOT NULL,
+    fecha_registro TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    usuario_registro INT NOT NULL
+);
