@@ -1,12 +1,34 @@
 <?php
-// Conexión a la base de datos
-include "modelo/conexion.php";
+require 'vendor/autoload.php';
+include 'modelo/conexion.php';
+use PhpOffice\PhpSpreadsheet\Spreadsheet;
+use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
+
 if ($conexion->connect_error) {
     die("Error de conexión: " . $conexion->connect_error);
 }
 
-// Consulta para obtener los datos del inventario
-$sql = "SELECT id_inventario, nombre_producto, descripcion, cantidad, precio FROM inventario";
+// Inicializar variables de filtro
+$nombre_producto = isset($_GET['nombre_producto']) ? trim($_GET['nombre_producto']) : '';
+$cantidad = isset($_GET['cantidad']) ? intval($_GET['cantidad']) : 0;
+$precio_min = isset($_GET['precio_min']) ? floatval($_GET['precio_min']) : 0;
+$precio_max = isset($_GET['precio_max']) ? floatval($_GET['precio_max']) : 0;
+
+// Construir la consulta con filtros
+$sql = "SELECT id_inventario, nombre_producto, descripcion, cantidad, precio FROM inventario WHERE 1=1";
+if (!empty($nombre_producto)) {
+    $sql .= " AND nombre_producto LIKE '%$nombre_producto%'";
+}
+if ($cantidad > 0) {
+    $sql .= " AND cantidad >= $cantidad";
+}
+if ($precio_min > 0) {
+    $sql .= " AND precio >= $precio_min";
+}
+if ($precio_max > 0) {
+    $sql .= " AND precio <= $precio_max";
+}
+
 $resultado = $conexion->query($sql);
 ?>
 <!DOCTYPE html>
@@ -25,16 +47,16 @@ $resultado = $conexion->query($sql);
         <form method="GET" class="mb-3">
             <div class="row">
                 <div class="col-md-4">
-                    <input type="text" name="nombre_producto" class="form-control" placeholder="Buscar por nombre">
+                    <input type="text" name="nombre_producto" class="form-control" placeholder="Buscar por nombre" value="<?php echo htmlspecialchars($nombre_producto); ?>">
                 </div>
                 <div class="col-md-2">
-                    <input type="number" name="cantidad" class="form-control" placeholder="Cantidad mínima">
+                    <input type="number" name="cantidad" class="form-control" placeholder="Cantidad mínima" value="<?php echo $cantidad; ?>">
                 </div>
                 <div class="col-md-2">
-                    <input type="number" step="0.01" name="precio_min" class="form-control" placeholder="Precio mínimo">
+                    <input type="number" step="0.01" name="precio_min" class="form-control" placeholder="Precio mínimo" value="<?php echo $precio_min; ?>">
                 </div>
                 <div class="col-md-2">
-                    <input type="number" step="0.01" name="precio_max" class="form-control" placeholder="Precio máximo">
+                    <input type="number" step="0.01" name="precio_max" class="form-control" placeholder="Precio máximo" value="<?php echo $precio_max; ?>">
                 </div>
                 <div class="col-md-2">
                     <button type="submit" class="btn btn-primary">Filtrar</button>
@@ -54,11 +76,13 @@ $resultado = $conexion->query($sql);
                 </tr>
             </thead>
             <tbody>
-                <?php while ($fila = $resultado->fetch_assoc()): ?>
+                <?php $data = [];
+                while ($fila = $resultado->fetch_assoc()): 
+                    $data[] = $fila; ?>
                     <tr>
                         <td><?php echo $fila['id_inventario']; ?></td>
-                        <td><?php echo $fila['nombre_producto']; ?></td>
-                        <td><?php echo $fila['descripcion']; ?></td>
+                        <td><?php echo htmlspecialchars($fila['nombre_producto']); ?></td>
+                        <td><?php echo htmlspecialchars($fila['descripcion']); ?></td>
                         <td><?php echo $fila['cantidad']; ?></td>
                         <td><?php echo $fila['precio']; ?></td>
                     </tr>
@@ -68,8 +92,8 @@ $resultado = $conexion->query($sql);
         
         <!-- Botones para exportar -->
         <div class="mt-3">
-            <a href="export_excel.php" class="btn btn-success">Exportar a Excel</a>
-            <a href="export_pdf.php" class="btn btn-danger">Exportar a PDF</a>
+            <a href="export_excel.php?data=<?php echo urlencode(json_encode($data)); ?>" class="btn btn-success">Exportar a Excel</a>
+            <a href="export_pdf.php?data=<?php echo urlencode(json_encode($data)); ?>" class="btn btn-danger">Exportar a PDF</a>
         </div>
     </div>
 </body>

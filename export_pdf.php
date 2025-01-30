@@ -1,32 +1,55 @@
 <?php
-require('fpdf/fpdf.php');
-include "modelo/conexion.php";
-if ($conexion->connect_error) {
-    die("Error de conexión: " . $conexion->connect_error);
+require 'vendor/autoload.php';
+use Dompdf\Dompdf;
+use Dompdf\Options;
+
+if (!isset($_GET['data'])) {
+    die("No hay datos para exportar.");
 }
 
-$sql = "SELECT id_inventario, nombre_producto, descripcion, cantidad, precio FROM inventario";
-$resultado = $conexion->query($sql);
-
-$pdf = new FPDF();
-$pdf->AddPage();
-$pdf->SetFont('Arial', 'B', 12);
-$pdf->Cell(40, 10, 'ID', 1);
-$pdf->Cell(50, 10, 'Nombre', 1);
-$pdf->Cell(60, 10, 'Descripcion', 1);
-$pdf->Cell(20, 10, 'Cantidad', 1);
-$pdf->Cell(20, 10, 'Precio', 1);
-$pdf->Ln();
-
-$pdf->SetFont('Arial', '', 10);
-while ($fila = $resultado->fetch_assoc()) {
-    $pdf->Cell(40, 10, $fila['id_inventario'], 1);
-    $pdf->Cell(50, 10, $fila['nombre_producto'], 1);
-    $pdf->Cell(60, 10, $fila['descripcion'], 1);
-    $pdf->Cell(20, 10, $fila['cantidad'], 1);
-    $pdf->Cell(20, 10, $fila['precio'], 1);
-    $pdf->Ln();
+// Decodificar los datos JSON
+$data = json_decode(urldecode($_GET['data']), true);
+if (!$data) {
+    die("Error al procesar los datos.");
 }
 
-$pdf->Output('D', 'reporte_inventario.pdf');
+// Crear el contenido HTML del PDF
+$html = '<h2>Reporte de Inventario</h2>';
+$html .= '<table border="1" width="100%" cellpadding="5" cellspacing="0">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Nombre</th>
+                    <th>Descripción</th>
+                    <th>Cantidad</th>
+                    <th>Precio</th>
+                </tr>
+            </thead>
+            <tbody>';
+
+foreach ($data as $row) {
+    $html .= '<tr>
+                <td>' . $row['id_inventario'] . '</td>
+                <td>' . htmlspecialchars($row['nombre_producto']) . '</td>
+                <td>' . htmlspecialchars($row['descripcion']) . '</td>
+                <td>' . $row['cantidad'] . '</td>
+                <td>' . $row['precio'] . '</td>
+              </tr>';
+}
+
+$html .= '</tbody></table>';
+
+// Configurar Dompdf
+$options = new Options();
+$options->set('defaultFont', 'Arial');
+$dompdf = new Dompdf($options);
+$dompdf->loadHtml($html);
+$dompdf->setPaper('A4', 'landscape');
+$dompdf->render();
+
+// Descargar el archivo PDF
+header('Content-Type: application/pdf');
+header('Content-Disposition: attachment; filename="reporte_inventario.pdf"');
+echo $dompdf->output();
+exit();
 ?>
