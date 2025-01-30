@@ -1,44 +1,39 @@
 <?php
 require 'vendor/autoload.php';
-use PhpOffice\PhpSpreadsheet\Spreadsheet;
+include 'modelo/conexion.php';
+use PhpOffice\PhpSpreadsheet\IOFactory;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 
-if (!isset($_GET['data'])) {
-    die("No hay datos para exportar.");
-}
-
-// Decodificar los datos JSON
-$data = json_decode(urldecode($_GET['data']), true);
-if (!$data) {
-    die("Error al procesar los datos.");
-}
-
-// Crear un nuevo documento Excel
-$spreadsheet = new Spreadsheet();
+// Cargar la plantilla de Excel
+$spreadsheet = IOFactory::load('modelo/plantilla.xlsx');
 $sheet = $spreadsheet->getActiveSheet();
 
-// Encabezados
-$sheet->setCellValue('A1', 'ID');
-$sheet->setCellValue('B1', 'Nombre');
-$sheet->setCellValue('C1', 'Descripción');
-$sheet->setCellValue('D1', 'Cantidad');
-$sheet->setCellValue('E1', 'Precio');
+// Obtener datos
+$data = json_decode(urldecode($_GET['data']), true);
+$fila = 7; // La fila donde inician los datos
 
-// Llenar los datos
-$fila = 2;
 foreach ($data as $row) {
-    $sheet->setCellValue('A' . $fila, $row['id_inventario']);
-    $sheet->setCellValue('B' . $fila, $row['nombre_producto']);
-    $sheet->setCellValue('C' . $fila, $row['descripcion']);
-    $sheet->setCellValue('D' . $fila, $row['cantidad']);
-    $sheet->setCellValue('E' . $fila, $row['precio']);
+    $sheet->setCellValue('B' . $fila, $row['id_inventario']);
+    $sheet->getStyle('B' . $fila)->getBorders()->getAllBorders()->setBorderStyle(\PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN);
+    $sheet->mergeCells('C' . $fila . ':D' . $fila);
+    $sheet->getStyle('C' . $fila . ':D' . $fila)->getBorders()->getAllBorders()->setBorderStyle(\PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN);
+    $sheet->setCellValue('C' . $fila, $row['nombre_producto']);
+    $sheet->mergeCells('E' . $fila . ':F' . $fila);
+    $sheet->getStyle('E' . $fila . ':F' . $fila)->getBorders()->getAllBorders()->setBorderStyle(\PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN);
+    $sheet->setCellValue('E' . $fila, $row['descripcion']);
+    $sheet->getStyle('G' . $fila)->getBorders()->getAllBorders()->setBorderStyle(\PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN);
+    $sheet->setCellValue('G' . $fila, $row['cantidad']);
+    $sheet->getStyle('H' . $fila)->getBorders()->getAllBorders()->setBorderStyle(\PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN);
+    $sheet->setCellValue('H' . $fila, $row['precio']);
     $fila++;
 }
 
-// Configurar el archivo para descargar
+// Configurar encabezados para descarga
 header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
 header('Content-Disposition: attachment; filename="reporte_inventario.xlsx"');
+
 $writer = new Xlsx($spreadsheet);
 $writer->save('php://output');
 exit();
+
 ?>
